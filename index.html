@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CUGS Overlap Checker — B.A. Computer Systems Technology</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface-2: #f0efe9;
+    --border: rgba(0,0,0,0.10);
+    --border-strong: rgba(0,0,0,0.20);
+    --text: #1a1917;
+    --text-muted: #6b6a65;
+    --text-hint: #9e9d98;
+    --blue-bg: #e8f0fc;
+    --blue-text: #1a4ba8;
+    --blue-border: #4a7de8;
+    --green-bg: #e2f3ec;
+    --green-text: #0f6e56;
+    --amber-bg: #fef3dc;
+    --amber-text: #8a5200;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-hint);
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-hint);
+    margin-bottom: 8px;
+  }
+
+  .track-group {
+    margin-bottom: 20px;
+  }
+
+  .track-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .track-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .cug-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px;
+  }
+
+  .cug-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 11px 13px;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s, transform 0.1s;
+    user-select: none;
+    position: relative;
+  }
+
+  .cug-card:hover:not(.disabled) {
+    border-color: var(--border-strong);
+    transform: translateY(-1px);
+  }
+
+  .cug-card.selected {
+    border-color: var(--blue-border);
+    background: var(--blue-bg);
+  }
+
+  .cug-card.disabled:not(.selected) {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .cug-card-inner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .cug-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.35;
+  }
+
+  .cug-card.selected .cug-name { color: var(--blue-text); }
+
+  .check-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    flex-shrink: 0;
+    margin-top: 1px;
+    transition: background 0.12s, border-color 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cug-card.selected .check-icon {
+    background: var(--blue-border);
+    border-color: var(--blue-border);
+  }
+
+  .check-icon svg {
+    display: none;
+  }
+
+  .cug-card.selected .check-icon svg {
+    display: block;
+  }
+
+  .counter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 12px;
+    z-index: 10;
+  }
+
+  .counter-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .pips {
+    display: flex;
+    gap: 5px;
+  }
+
+  .pip {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border);
+    border: 1px solid var(--border-strong);
+    transition: background 0.15s;
+  }
+
+  .pip.filled {
+    background: var(--blue-border);
+    border-color: var(--blue-border);
+  }
+
+  .reset-btn {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: border-color 0.12s, color 0.12s;
+  }
+
+  .reset-btn:hover { border-color: var(--border-strong); color: var(--text); }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 28px 0;
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+
+  .stat-card.neutral { background: var(--surface-2); }
+  .stat-card.green { background: var(--green-bg); }
+  .stat-card.amber { background: var(--amber-bg); }
+
+  .stat-num {
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-card.neutral .stat-num { color: var(--text); }
+  .stat-card.green .stat-num { color: var(--green-text); }
+  .stat-card.amber .stat-num { color: var(--amber-text); }
+
+  .stat-label {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .stat-card.neutral .stat-label { color: var(--text-muted); }
+  .stat-card.green .stat-label { color: var(--green-text); }
+  .stat-card.amber .stat-label { color: var(--amber-text); }
+
+  #results { display: none; }
+
+  .overlap-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+
+  .pair-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .badge-cug {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--blue-bg);
+    color: var(--blue-text);
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(74,125,232,0.25);
+  }
+
+  .pair-x {
+    font-size: 13px;
+    color: var(--text-hint);
+  }
+
+  .course-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+
+  .chip-code {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+  }
+
+  .course-names-list {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .no-overlap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-hint);
+    text-align: center;
+  }
+
+  @media (max-width: 600px) {
+    .stats-row { grid-template-columns: 1fr; }
+    .cug-grid { grid-template-columns: 1fr 1fr; }
+    h1 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Rowan University — Department of Computer Science</p>
+    <h1>CUGS Overlap Checker</h1>
+    <p class="subtitle">B.A. in Computer Systems Technology (O714) &mdash; Select 5 certificate programs to see shared courses</p>
+  </header>
+
+  <div class="counter-bar">
+    <span class="counter-text" id="counter-text">0 of 5 selected</span>
+    <div class="pips">
+      <div class="pip" id="pip-1"></div>
+      <div class="pip" id="pip-2"></div>
+      <div class="pip" id="pip-3"></div>
+      <div class="pip" id="pip-4"></div>
+      <div class="pip" id="pip-5"></div>
+    </div>
+    <button class="reset-btn" onclick="resetAll()">Reset</button>
+  </div>
+
+  <div class="track-group">
+    <p class="track-label">Database</p>
+    <div class="cug-grid">
+      <div class="cug-card" data-id="db-fund" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Database Fundamentals</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+      <div class="cug-card" data-id="db-dev" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Database Development</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="track-group">
+    <p class="track-label">Cybersecurity</p>
+    <div class="cug-grid">
+      <div class="cug-card" data-id="cyber-it" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Cybersecurity in IT</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+      <div class="cug-card" data-id="ethical-hack" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Ethical Hacking</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+      <div class="cug-card" data-id="dig-forensics" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Digital Forensics</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+      <div class="cug-card" data-id="ids-ips" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Intrusion Detection / Prevention</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="track-group">
+    <p class="track-label">Operating Systems &amp; Linux</p>
+    <div class="cug-grid">
+      <div class="cug-card" data-id="os-fund" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Operating Systems Fundamentals</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+      <div class="cug-card" data-id="linux-admin" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Linux Systems Administration</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="track-group">
+    <p class="track-label">Cloud</p>
+    <div class="cug-grid">
+      <div class="cug-card" data-id="azure" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Azure Fundamentals</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="track-group">
+    <p class="track-label">Networking</p>
+    <div class="cug-grid">
+      <div class="cug-card" data-id="net-fund" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Network Fundamentals</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+      <div class="cug-card" data-id="adv-net" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Advanced Network Technology</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="track-group">
+    <p class="track-label">Business &amp; Management</p>
+    <div class="cug-grid">
+      <div class="cug-card" data-id="mis" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Management Information Systems</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+      <div class="cug-card" data-id="proj-mgmt" onclick="toggle(this)">
+        <div class="cug-card-inner">
+          <span class="cug-name">Project Management</span>
+          <div class="check-icon"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.8 7L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="divider"></div>
+    <p class="section-label" style="margin-bottom:14px;">Results</p>
+
+    <div class="stats-row">
+      <div class="stat-card neutral">
+        <div class="stat-num" id="stat-total">—</div>
+        <div class="stat-label">Total unique courses</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-num" id="stat-overlap">—</div>
+        <div class="stat-label">Double-dipping courses</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-num" id="stat-needed">—</div>
+        <div class="stat-label">Additional credits needed to reach 60 cr</div>
+      </div>
+    </div>
+
+    <p class="section-label" style="margin-bottom:10px;">Shared courses by pair</p>
+    <div id="overlap-detail"></div>
+  </div>
+
+  <footer>
+    B.A. in Computer Systems Technology (O714) &mdash; Rowan University Department of Computer Science &mdash; Effective 2023
+  </footer>
+
+</div>
+
+<script>
+const CUGS = {
+  'db-fund':       { name: 'Database Fundamentals',            courses: ['CST 02110','CST 02210','CST 02220','CST 02320'] },
+  'db-dev':        { name: 'Database Development',             courses: ['CST 02230','CST 02250','CST 02330','CST 02400'] },
+  'cyber-it':      { name: 'Cybersecurity in IT',              courses: ['CST 01110','CST 01111','CST 03201','CST 03410'] },
+  'ethical-hack':  { name: 'Ethical Hacking',                  courses: ['CST 03215','CST 03218','CST 03315','CST 03418'] },
+  'dig-forensics': { name: 'Digital Forensics',                courses: ['CST 03252','CST 03253','CST 03352','CST 03452'] },
+  'ids-ips':       { name: 'Intrusion Detection / Prevention', courses: ['CST 03270','CST 03370','CST 03372','CST 03472'] },
+  'os-fund':       { name: 'Operating Systems Fundamentals',   courses: ['CST 06220','CST 06225','CST 06230','CST 06235'] },
+  'linux-admin':   { name: 'Linux Systems Administration',     courses: ['CST 09210','CST 06220','CST 06225','CST 06240'] },
+  'azure':         { name: 'Azure Fundamentals',               courses: ['CST 02110','CST 06340','CST 06343','CST 06440'] },
+  'net-fund':      { name: 'Network Fundamentals',             courses: ['CST 01111','CST 09210','CST 09290','CST 09310'] },
+  'adv-net':       { name: 'Advanced Network Technology',      courses: ['CST 09320','CST 09325','CST 09430','CST 09435'] },
+  'mis':           { name: 'Management Information Systems',   courses: ['BUS 01105','MIS 02234'] },
+  'proj-mgmt':     { name: 'Project Management',               courses: ['MIS 02325','MIS 02328','MIS 02329','MGT 06300'] },
+};
+
+const COURSE_NAMES = {
+  'CST 02110': 'Implementations of SQL I',
+  'CST 02210': 'Implementations of SQL II',
+  'CST 02220': 'Database Administration I',
+  'CST 02320': 'Database Administration II',
+  'CST 02230': 'Database Development',
+  'CST 02250': 'Database Security',
+  'CST 02330': 'Database Programming',
+  'CST 02400': 'Data Warehouse Principles',
+  'CST 01110': 'Information Technology Foundations',
+  'CST 01111': 'Computer Hardware and Operations',
+  'CST 03201': 'Security+',
+  'CST 03410': 'Cyber Defense',
+  'CST 03215': 'Penetration Testing Fundamentals',
+  'CST 03218': 'Ethical Hacking Fundamentals',
+  'CST 03315': 'Advanced Penetration Testing',
+  'CST 03418': 'Advanced Topics in Ethical Hacking',
+  'CST 03252': 'Foundations of Computer Forensics',
+  'CST 03253': 'Applications for Computer Forensics',
+  'CST 03352': 'Digital Incident Handling',
+  'CST 03452': 'Advanced Digital Forensics Investigation',
+  'CST 03270': 'Introduction to Intrusion Detection',
+  'CST 03370': 'IDS/IPS Administration',
+  'CST 03372': 'Knowledge Management in IDS/IPS',
+  'CST 03472': 'IDS/IPS for Cloud',
+  'CST 06220': 'Linux/Unix Essentials',
+  'CST 06225': 'Linux/Unix Administration',
+  'CST 06230': 'Microcomputer Operating Systems I',
+  'CST 06235': 'Microcomputer Operating Systems II',
+  'CST 06240': 'Linux System and Services',
+  'CST 06340': 'Introduction to Azure Cloud Services',
+  'CST 06343': 'Azure Management Tools and Security',
+  'CST 06440': 'Azure Security, Compliance, and Identity',
+  'CST 09210': 'Intro to Computer Networks and Data Communications',
+  'CST 09290': 'Intermediate Networking',
+  'CST 09310': 'Network Support and Troubleshooting',
+  'CST 09320': 'Network Architectures, Models, and Protocols',
+  'CST 09325': 'Network Communication and Configuration',
+  'CST 09430': 'Switching, Routing, and Wireless Essentials',
+  'CST 09435': 'Enterprise Networking, Security, and Automation',
+  'BUS 01105': 'Business Perspectives',
+  'MIS 02234': 'Management Information Systems',
+  'MIS 02325': 'Project Management',
+  'MIS 02328': 'Agile Project Management',
+  'MIS 02329': 'Project Management Associate Exam Prep',
+  'MGT 06300': 'Organizational Behavior',
+};
+
+let selected = new Set();
+
+function toggle(el) {
+  const id = el.dataset.id;
+  if (el.classList.contains('disabled') && !el.classList.contains('selected')) return;
+  if (el.classList.contains('selected')) {
+    el.classList.remove('selected');
+    selected.delete(id);
+  } else {
+    if (selected.size >= 5) return;
+    el.classList.add('selected');
+    selected.add(id);
+  }
+  updateUI();
+}
+
+function resetAll() {
+  selected.clear();
+  document.querySelectorAll('.cug-card').forEach(c => c.classList.remove('selected','disabled'));
+  updateUI();
+}
+
+function updateUI() {
+  const count = selected.size;
+  document.getElementById('counter-text').textContent = count + ' of 5 selected';
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById('pip-' + i).classList.toggle('filled', i <= count);
+  }
+  document.querySelectorAll('.cug-card').forEach(c => {
+    if (!c.classList.contains('selected')) {
+      c.classList.toggle('disabled', count >= 5);
+    }
+  });
+  if (count === 5) showResults();
+  else document.getElementById('results').style.display = 'none';
+}
+
+function showResults() {
+  const ids = Array.from(selected);
+  const allCourses = ids.flatMap(id => CUGS[id].courses);
+  const freq = {};
+  allCourses.forEach(c => freq[c] = (freq[c] || 0) + 1);
+  const overlapping = Object.keys(freq).filter(c => freq[c] > 1);
+  const unique = Object.keys(freq);
+
+  const totalCourses = unique.length;
+  const overlapCount = overlapping.length;
+  const creditsEarned = totalCourses * 3;
+  const additionalNeeded = Math.max(0, 60 - creditsEarned);
+
+  document.getElementById('stat-total').textContent = totalCourses;
+  document.getElementById('stat-overlap').textContent = overlapCount;
+  document.getElementById('stat-needed').textContent = additionalNeeded > 0 ? additionalNeeded + ' sh' : '0 sh';
+
+  const detail = document.getElementById('overlap-detail');
+  if (overlapCount === 0) {
+    detail.innerHTML = '<div class="no-overlap">No overlapping courses in this combination — all 5 CUGS contribute fully unique courses.</div>';
+  } else {
+    let html = '';
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const shared = CUGS[ids[i]].courses.filter(c => CUGS[ids[j]].courses.includes(c));
+        if (shared.length === 0) continue;
+        html += '<div class="overlap-card">';
+        html += '<div class="pair-badges">';
+        html += '<span class="badge-cug">' + CUGS[ids[i]].name + '</span>';
+        html += '<span class="pair-x">&times;</span>';
+        html += '<span class="badge-cug">' + CUGS[ids[j]].name + '</span>';
+        html += '</div>';
+        html += '<div class="course-chips">';
+        shared.forEach(c => { html += '<span class="chip-code">' + c + '</span>'; });
+        html += '</div>';
+        html += '<div class="course-names-list">';
+        html += shared.map(c => COURSE_NAMES[c] || c).join(' &middot; ');
+        html += '</div></div>';
+      }
+    }
+    detail.innerHTML = html;
+  }
+
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+</body>
+</html>
